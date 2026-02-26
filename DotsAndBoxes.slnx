@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Tests/">
+    <Project Path="DotsAndBoxes.Game.Core.Tests/DotsAndBoxes.Game.Core.Tests.csproj" />
+  </Folder>
+  <Project Path="DotsAndBoxes.Game.Core/DotsAndBoxes.Game.Core.csproj" />
+  <Project Path="DotsAndBoxes.Shared/DotsAndBoxes.Shared.csproj" />
+  <Project Path="DotsAndBoxes/DotsAndBoxes.Client/DotsAndBoxes.Client.csproj" />
+  <Project Path="DotsAndBoxes/DotsAndBoxes/DotsAndBoxes.csproj" />
+</Solution>
