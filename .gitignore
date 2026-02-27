@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 /DotsAndBoxes.Game.Core.Tests/allure-report
 /DotsAndBoxes.Game.Core.Tests/allure-results
+/DotsAndBoxes.Game.Core.Test/allure-results
+/DotsAndBoxes.Game.Core.Test/allure-report
