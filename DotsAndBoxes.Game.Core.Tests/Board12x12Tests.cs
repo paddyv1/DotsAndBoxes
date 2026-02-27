@@ -1,9 +1,11 @@
-﻿using DotsAndBoxes.Game.Core;
-using System;
+﻿using System;
+using Allure.Xunit.Attributes;
+using DotsAndBoxes.Game.Core;
 using Xunit;
 
 namespace DotsAndBoxes.Game.Core.Tests
 {
+    [AllureFeature("BoardStaticClassTests")]
     public class Board12x12Tests
     {
         [Fact]

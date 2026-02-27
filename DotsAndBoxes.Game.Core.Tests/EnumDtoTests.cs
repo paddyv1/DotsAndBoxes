@@ -1,15 +1,18 @@
-﻿using DotsAndBoxes.Game.Core.DTO;
+﻿using System;
+using System.Text.Json;
+using Allure.Xunit.Attributes;
+using DotsAndBoxes.Game.Core.DTO;
 using DotsAndBoxes.Game.Core.Enum;
 using DotsAndBoxes.Game.Core.Tests;
-using System;
-using System.Text.Json;
 using Xunit;
 
 namespace DotsAndBoxes.Game.Core.Tests
 {
+    [AllureFeature("Record and Enum Tests")]
     public class EnumDtoTests
     {
-        [Fact]
+        [Fact(DisplayName = "Add label to existing issue by authorized user")]
+        [AllureTag("smoke")]
         public void GameEvent_Serializes_And_Deserializes_Correctly()
         {
             var original = new GameEvent
