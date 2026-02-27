@@ -28,7 +28,7 @@ namespace DotsAndBoxes.Game.Core.Test.Helper
             EdgeHelper.TryDecode(edgeId, out EdgeCoord coordActual);
             
             // Assert
-            Assert.That(coordExpected, Is.EqualTo(coordActual));
+            Assert.That(coordActual, Is.EqualTo(coordExpected));
         }
 
         [Test]
@@ -49,7 +49,7 @@ namespace DotsAndBoxes.Game.Core.Test.Helper
             EdgeHelper.TryDecode(edgeId, out EdgeCoord coordActual);
 
             // Assert
-            Assert.That(coordExpected, Is.EqualTo(coordActual));
+            Assert.That(coordActual, Is.EqualTo(coordExpected));
         }
 
         [Test]
@@ -70,7 +70,7 @@ namespace DotsAndBoxes.Game.Core.Test.Helper
             EdgeHelper.TryDecode(edgeId, out EdgeCoord coordActual);
 
             // Assert
-            Assert.That(coordExpected, Is.EqualTo(coordActual));
+            Assert.That(coordActual, Is.EqualTo(coordExpected));
         }
 
         [Test]
@@ -91,7 +91,7 @@ namespace DotsAndBoxes.Game.Core.Test.Helper
             EdgeHelper.TryDecode(edgeId, out EdgeCoord coordActual);
 
             // Assert
-            Assert.That(coordExpected, Is.EqualTo(coordActual));
+            Assert.That(coordActual, Is.EqualTo(coordExpected));
         }
 
         [Test]
@@ -112,7 +112,7 @@ namespace DotsAndBoxes.Game.Core.Test.Helper
             EdgeHelper.TryDecode(edgeId, out EdgeCoord coordActual);
 
             // Assert
-            Assert.That(coordExpected, Is.EqualTo(coordActual));
+            Assert.That(coordActual, Is.EqualTo(coordExpected));
         }
 
         [Test]
@@ -124,8 +124,8 @@ namespace DotsAndBoxes.Game.Core.Test.Helper
             EdgeCoord coordExpected = new EdgeCoord
             {
                 orient = Enum.EdgeOrient.Vertical,
-                x = 12,
-                y = 0
+                x = 0,
+                y = 1
             };
 
 
@@ -133,7 +133,7 @@ namespace DotsAndBoxes.Game.Core.Test.Helper
             EdgeHelper.TryDecode(edgeId, out EdgeCoord coordActual);
 
             // Assert
-            Assert.That(coordExpected, Is.EqualTo(coordActual));
+            Assert.That(coordActual, Is.EqualTo(coordExpected));
         }
 
         [Test]
@@ -145,8 +145,8 @@ namespace DotsAndBoxes.Game.Core.Test.Helper
             EdgeCoord coordExpected = new EdgeCoord
             {
                 orient = Enum.EdgeOrient.Vertical,
-                x = 12,
-                y = 11
+                x = 11,
+                y = 12
             };
 
 
@@ -154,45 +154,63 @@ namespace DotsAndBoxes.Game.Core.Test.Helper
             EdgeHelper.TryDecode(edgeId, out EdgeCoord coordActual);
 
             // Assert
-            Assert.That(coordExpected, Is.EqualTo(coordActual));
+            Assert.That(coordActual, Is.EqualTo(coordExpected));
         }
 
         [Test]
         public void TryEncode_StateUnderTest_ExpectedBehavior()
         {
             // Arrange
-            
+            EdgeCoord coord = new EdgeCoord
+            {
+                orient = Enum.EdgeOrient.Vertical,
+                x = 11,
+                y = 12
+            };
+            int edgeId;
+
+            int ExpectededgeId = 311;
 
             // Act
+            EdgeHelper.TryEncode(coord, out edgeId);
             
-
+            
             // Assert
-            Assert.Fail();
+            Assert.That(edgeId, Is.EqualTo(ExpectededgeId));
         }
 
         [Test]
         public void IsValidEdgeId_StateUnderTest_ExpectedBehavior()
         {
-            // Arrange
-            
+            // Valid edge IDs
+            Assert.That(EdgeHelper.IsValidEdgeId(0), Is.True);
+            Assert.That(EdgeHelper.IsValidEdgeId(155), Is.True);
+            Assert.That(EdgeHelper.IsValidEdgeId(156), Is.True);
+            Assert.That(EdgeHelper.IsValidEdgeId(311), Is.True);
 
-            // Act
-            
-            // Assert
-            Assert.Fail();
+            // Invalid edge IDs
+            Assert.That(EdgeHelper.IsValidEdgeId(-1), Is.False);
+            Assert.That(EdgeHelper.IsValidEdgeId(312), Is.False);
         }
 
         [Test]
         public void IsValidCoord_StateUnderTest_ExpectedBehavior()
         {
-            // Arrange
-            
+            // Valid coordinates
+            var validCoord = new EdgeCoord { orient = Enum.EdgeOrient.Horizontal, x = 0, y = 0 };
+            Assert.That(EdgeHelper.IsValidCoord(validCoord), Is.True);
 
-            // Act
-            
+            validCoord = new EdgeCoord { orient = Enum.EdgeOrient.Vertical, x = 12, y = 12 };
+            Assert.That(EdgeHelper.IsValidCoord(validCoord), Is.True);
 
-            // Assert
-            Assert.Fail();
+            // Invalid coordinates
+            var invalidCoord1 = new EdgeCoord { orient = Enum.EdgeOrient.Horizontal, x = -1, y = 0 };
+            Assert.That(EdgeHelper.IsValidCoord(invalidCoord1), Is.False);
+
+            var invalidCoord2 = new EdgeCoord { orient = Enum.EdgeOrient.Vertical, x = 0, y = 13 };
+            Assert.That(EdgeHelper.IsValidCoord(invalidCoord2), Is.False);
+
+            Assert.That(EdgeHelper.IsValidCoord(null), Is.False);
         }
     }
 }

@@ -12,14 +12,15 @@ namespace DotsAndBoxes.Game.Core.Helper
         {
             //first 0->155 horizontal,
             //156->311 vertical
-            EdgeOrient calculatedOreint = edgeId < 156 ? EdgeOrient.Horizontal : EdgeOrient.Vertical;
+            EdgeOrient calculatedOrient = edgeId < 156 ? EdgeOrient.Horizontal : EdgeOrient.Vertical;
+            int baseId = calculatedOrient == EdgeOrient.Horizontal ? edgeId : edgeId - 156;
 
-            int calculatedX = edgeId % 12;
-            int calculatedY = edgeId / 12;
+            int calculatedX = baseId % 12;
+            int calculatedY = baseId / 12;
 
             coord = new EdgeCoord
             {
-                orient = calculatedOreint,
+                orient = calculatedOrient,
                 x = calculatedX,
                 y = calculatedY
             };
@@ -51,7 +52,7 @@ namespace DotsAndBoxes.Game.Core.Helper
 
         public static bool IsValidEdgeId(int edgeId)
         {
-            if(edgeId > 311 && edgeId > 0) { return  false; }
+            if(edgeId > 311 || edgeId < 0) { return  false; }
 
             return true;
         }
