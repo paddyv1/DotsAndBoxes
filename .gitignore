@@ -362,3 +362,4 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /DotsAndBoxes.Game.Core.Tests/allure-report
+/DotsAndBoxes.Game.Core.Tests/allure-results
