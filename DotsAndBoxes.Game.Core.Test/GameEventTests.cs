@@ -4,6 +4,7 @@ using DotsAndBoxes.Game.Core.Enum;
 
 namespace DotsAndBoxes.Game.Core.Test
 {
+    
     [AllureNUnit]
     public class GameEventTests
     {
@@ -13,19 +14,19 @@ namespace DotsAndBoxes.Game.Core.Test
             var gameEvent = new GameEvent
             {
                 type = GameEventType.EdgePlaced,
-                player = "Player1",
-                edgeId = "edge_1_2",
-                boxX = "0",
-                boxY = "1",
-                nextPlayer = "Player2"
+                player = 0,
+                edgeId = 2,
+                boxX = 0,
+                boxY = 0,
+                nextPlayer = 1
             };
 
             Assert.That(gameEvent.type, Is.EqualTo(GameEventType.EdgePlaced));
-            Assert.That(gameEvent.player, Is.EqualTo("Player1"));
-            Assert.That(gameEvent.edgeId, Is.EqualTo("edge_1_2"));
-            Assert.That(gameEvent.boxX, Is.EqualTo("0"));
-            Assert.That(gameEvent.boxY, Is.EqualTo("1"));
-            Assert.That(gameEvent.nextPlayer, Is.EqualTo("Player2"));
+            Assert.That(gameEvent.player, Is.EqualTo(0));
+            Assert.That(gameEvent.edgeId, Is.EqualTo(2));
+            Assert.That(gameEvent.boxX, Is.EqualTo(0));
+            Assert.That(gameEvent.boxY, Is.EqualTo(0));
+            Assert.That(gameEvent.nextPlayer, Is.EqualTo(1));
         }
 
         [Test]
@@ -34,21 +35,21 @@ namespace DotsAndBoxes.Game.Core.Test
             var event1 = new GameEvent
             {
                 type = GameEventType.BoxClaimed,
-                player = "Player1",
-                edgeId = "edge_1",
-                boxX = "2",
-                boxY = "3",
-                nextPlayer = "Player1"
+                player = 0,
+                edgeId = 0,
+                boxX = 0,
+                boxY = 0,
+                nextPlayer = 1
             };
 
             var event2 = new GameEvent
             {
                 type = GameEventType.BoxClaimed,
-                player = "Player1",
-                edgeId = "edge_1",
-                boxX = "2",
-                boxY = "3",
-                nextPlayer = "Player1"
+                player = 0,
+                edgeId = 0,
+                boxX = 0,
+                boxY = 0,
+                nextPlayer = 1
             };
 
             Assert.That(event1, Is.EqualTo(event2));
@@ -60,21 +61,21 @@ namespace DotsAndBoxes.Game.Core.Test
             var event1 = new GameEvent
             {
                 type = GameEventType.TurnChanged,
-                player = "Player1",
-                edgeId = "edge_1",
-                boxX = "0",
-                boxY = "0",
-                nextPlayer = "Player2"
+                player = 1,
+                edgeId = 0,
+                boxX = 0,
+                boxY = 0,
+                nextPlayer = 0
             };
 
             var event2 = new GameEvent
             {
                 type = GameEventType.GameOver,
-                player = "Player1",
-                edgeId = "edge_1",
-                boxX = "0",
-                boxY = "0",
-                nextPlayer = "Player2"
+                player = 0,
+                edgeId = 0,
+                boxX = 0,
+                boxY = 0,
+                nextPlayer = 1
             };
 
             Assert.That(event1, Is.Not.EqualTo(event2));
@@ -90,11 +91,11 @@ namespace DotsAndBoxes.Game.Core.Test
             var gameEvent = new GameEvent
             {
                 type = eventType,
-                player = "TestPlayer",
-                edgeId = "test_edge",
-                boxX = "0",
-                boxY = "0",
-                nextPlayer = "TestPlayer"
+                player = 0,
+                edgeId = 0,
+                boxX = 0,
+                boxY = 0,
+                nextPlayer = 1
             };
 
             Assert.That(gameEvent.type, Is.EqualTo(eventType));

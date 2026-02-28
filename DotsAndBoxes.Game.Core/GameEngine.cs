@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Text;
+using DotsAndBoxes.Game.Core.DTO;
+using DotsAndBoxes.Game.Core.Enum;
+using DotsAndBoxes.Game.Core.Helper;
 
 namespace DotsAndBoxes.Game.Core
 {
     public class GameEngine
     {
-        public sbyte[] _hEdgeOwners = CreateArrayWithValue(156, -1);
-        public sbyte[] _vEdgeOwners = CreateArrayWithValue(156, -1);
+        public sbyte[] _hEdgeOwners = CreateArrayWithValue(Board12x12.HEdgeCount, -1);
+        public sbyte[] _vEdgeOwners = CreateArrayWithValue(Board12x12.VEdgeCount, -1);
 
 
         public int currentPlayer { get; private set; } = 0;
@@ -15,11 +19,16 @@ namespace DotsAndBoxes.Game.Core
         public long stateVersion { get; private set; } = 0;
         public int[] scores { get; } = new int[2];
 
+        public List<GameEvent> gameEvents { get; private set; } = new List<GameEvent>();
+
 
         public GameEngine()
         {
             
         }
+
+        public int HIndex(int x, int y) => y * Board12x12.W + x;
+        public int VIndex(int x, int y) => y * (Board12x12.W + 1) + x;
 
         private static sbyte[] CreateArrayWithValue(int length, sbyte value)
         {
@@ -31,7 +40,7 @@ namespace DotsAndBoxes.Game.Core
             return arr;
         }
 
-        public sbyte GetEdgeOwner(int edgeId)
+        public int GetEdgeOwner(int edgeId)
         {
             if(edgeId < 156)
             {
@@ -44,24 +53,26 @@ namespace DotsAndBoxes.Game.Core
             }
         }
 
-        public void SetEdgeOwner(int edgeId, sbyte player)
+        public void SetEdgeOwner(int edgeId, int player)
         {
-            sbyte playerName1= 0, player2 = 1;
 
 
-            if(player != playerName1 || player2 != 1)
+
+            if (player != 0 && player != 1)
             {
-                throw new ArgumentException();
+                throw new ArgumentException(nameof(player));
             }
+
+            sbyte playerFormatted = ((sbyte)player);
 
             if(edgeId > 155)
             {
                 edgeId = edgeId - 156;
-                _vEdgeOwners[edgeId] = player;
+                _vEdgeOwners[edgeId] = playerFormatted;
             }
             else
             {
-                _hEdgeOwners[edgeId] = player;
+                _hEdgeOwners[edgeId] = playerFormatted;
             }
 
         }
@@ -87,5 +98,109 @@ namespace DotsAndBoxes.Game.Core
 
             return false;
         }
+
+
+        public ApplyMoveResult ApplyMove(int player, int edgeId)
+        {
+            //first check for gameover
+            if(gameOver == true)
+            {
+                ApplyMoveResult gameOverResult = new ApplyMoveResult
+                {
+                    Ok = false,
+                    error = MoveError.GameOver,
+                    StateVersion = stateVersion,
+                    Events = gameEvents
+                };
+
+                return gameOverResult;
+            }
+
+            //if player is not current player
+            if(player != currentPlayer)
+            {
+                ApplyMoveResult incorrectPlayerResult = new ApplyMoveResult
+                {
+                    Ok = false,
+                    error = MoveError.WrongTurn,
+                    StateVersion = stateVersion,
+                    Events = gameEvents
+                };
+
+                return incorrectPlayerResult;
+            }
+
+
+            //out of range move
+            if (!EdgeHelper.IsValidEdgeId(edgeId))
+            {
+                ApplyMoveResult incorrectPlayerResult = new ApplyMoveResult
+                {
+                    Ok = false,
+                    error = MoveError.OutOfRange,
+                    StateVersion = stateVersion,
+                    Events = gameEvents
+                };
+
+                return incorrectPlayerResult;
+            }
+
+            //edge already owned
+            if (!IsEdgeFree(edgeId))
+            {
+                ApplyMoveResult edgeNotFreeResult = new ApplyMoveResult
+                {
+                    Ok = false,
+                    error = MoveError.EdgeAlreadyTaken,
+                    StateVersion = stateVersion,
+                    Events = gameEvents
+                };
+
+                return edgeNotFreeResult;
+            }
+
+
+
+            //at this point in method move will be valid, apply logic to
+            //apply the move
+            SetEdgeOwner(edgeId, player);
+            int nextPlayer = (currentPlayer+1)% 2;
+            //add to gameevent list
+            gameEvents.Add(new GameEvent
+            {
+                type = GameEventType.EdgePlaced,
+                edgeId = edgeId,
+                player = player,
+                nextPlayer = nextPlayer,
+                boxX = 0,
+                boxY = 0
+
+            });
+
+            //change player in game engine
+            currentPlayer = nextPlayer;
+            //increment state version
+            stateVersion++;
+
+
+
+            ApplyMoveResult ValidResult = new ApplyMoveResult
+            {
+                Ok = true,
+                error = MoveError.None,
+                StateVersion = stateVersion,
+                Events = gameEvents
+            };
+
+            return ValidResult;
+
+        }
+
+        public void Reset()
+        {
+            throw new NotImplementedException("Can Add Later");
+        }
     }
+
+    
 }

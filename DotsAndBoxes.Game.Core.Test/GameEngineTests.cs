@@ -30,7 +30,7 @@ namespace DotsAndBoxes.Game.Core.Test
             // Arrange
             var gameEngine = new GameEngine();
             int edgeId = 0;
-            sbyte player = 0;
+            int player = 0;
 
             // Act
             gameEngine.SetEdgeOwner(
