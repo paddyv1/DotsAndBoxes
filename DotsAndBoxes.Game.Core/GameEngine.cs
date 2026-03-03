@@ -16,10 +16,14 @@ namespace DotsAndBoxes.Game.Core
         //list to hold boxes in 12x12 gird
         public sbyte[] _boxOwners = CreateArrayWithValue(144, -1);
 
-
+        //switch between 0 and 1, 2 players max for now
         public int currentPlayer { get; private set; } = 0;
         public bool gameOver { get; private set; } = false;
+
+        //used in game events to track which move we are on
         public long stateVersion { get; private set; } = 0;
+
+        //keep track of player 0 and player 1 total socres
         public int[] scores { get; } = new int[2];
 
         public List<GameEvent> gameEvents { get; private set; } = new List<GameEvent>();
