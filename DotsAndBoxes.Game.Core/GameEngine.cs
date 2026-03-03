@@ -13,6 +13,9 @@ namespace DotsAndBoxes.Game.Core
         public sbyte[] _hEdgeOwners = CreateArrayWithValue(Board12x12.HEdgeCount, -1);
         public sbyte[] _vEdgeOwners = CreateArrayWithValue(Board12x12.VEdgeCount, -1);
 
+        //list to hold boxes in 12x12 gird
+        public sbyte[] _boxOwners = CreateArrayWithValue(144, -1);
+
 
         public int currentPlayer { get; private set; } = 0;
         public bool gameOver { get; private set; } = false;
@@ -29,6 +32,30 @@ namespace DotsAndBoxes.Game.Core
 
         public int HIndex(int x, int y) => y * Board12x12.W + x;
         public int VIndex(int x, int y) => y * (Board12x12.W + 1) + x;
+
+        public int boxIndex(int x, int y) => y * 12 + x;
+
+        //need to implement still
+        //look up 4 surrounding edges
+        public bool IsBoxComplete(int boxX, int boxY)
+        {
+            // Bounds check (optional for safety)
+            if (boxX < 0 || boxX >= Board12x12.W || boxY < 0 || boxY >= Board12x12.H)
+                throw new ArgumentOutOfRangeException();
+
+            // Calculate indices in each edge array
+            int hTop = boxY * Board12x12.W + boxX;        // Horizontal top
+            int hBottom = (boxY + 1) * Board12x12.W + boxX; // Horizontal bottom
+            int vLeft = boxY * (Board12x12.W + 1) + boxX;   // Vertical left
+            int vRight = boxY * (Board12x12.W + 1) + (boxX + 1); // Vertical right
+
+            // If all four owners are not -1, the box is complete
+            return
+                _hEdgeOwners[hTop] != -1 &&
+                _hEdgeOwners[hBottom] != -1 &&
+                _vEdgeOwners[vLeft] != -1 &&
+                _vEdgeOwners[vRight] != -1;
+        }
 
         private static sbyte[] CreateArrayWithValue(int length, sbyte value)
         {
@@ -102,98 +129,135 @@ namespace DotsAndBoxes.Game.Core
 
         public ApplyMoveResult ApplyMove(int player, int edgeId)
         {
-            //first check for gameover
-            if(gameOver == true)
+            if (gameOver)
             {
-                ApplyMoveResult gameOverResult = new ApplyMoveResult
+                return new ApplyMoveResult
                 {
                     Ok = false,
                     error = MoveError.GameOver,
                     StateVersion = stateVersion,
                     Events = gameEvents
                 };
-
-                return gameOverResult;
             }
 
-            //if player is not current player
-            if(player != currentPlayer)
+            if (player != currentPlayer)
             {
-                ApplyMoveResult incorrectPlayerResult = new ApplyMoveResult
+                return new ApplyMoveResult
                 {
                     Ok = false,
                     error = MoveError.WrongTurn,
                     StateVersion = stateVersion,
                     Events = gameEvents
                 };
-
-                return incorrectPlayerResult;
             }
 
-
-            //out of range move
             if (!EdgeHelper.IsValidEdgeId(edgeId))
             {
-                ApplyMoveResult incorrectPlayerResult = new ApplyMoveResult
+                return new ApplyMoveResult
                 {
                     Ok = false,
                     error = MoveError.OutOfRange,
                     StateVersion = stateVersion,
                     Events = gameEvents
                 };
-
-                return incorrectPlayerResult;
             }
 
-            //edge already owned
             if (!IsEdgeFree(edgeId))
             {
-                ApplyMoveResult edgeNotFreeResult = new ApplyMoveResult
+                return new ApplyMoveResult
                 {
                     Ok = false,
                     error = MoveError.EdgeAlreadyTaken,
                     StateVersion = stateVersion,
                     Events = gameEvents
                 };
-
-                return edgeNotFreeResult;
             }
 
-
-
-            //at this point in method move will be valid, apply logic to
-            //apply the move
             SetEdgeOwner(edgeId, player);
-            int nextPlayer = (currentPlayer+1)% 2;
-            //add to gameevent list
+
+            // Find affected boxes (up to 2)
+            var claimedBoxes = new List<(int boxX, int boxY)>();
+            if (edgeId < 156)
+            {
+                // Horizontal edge
+                int h = edgeId % Board12x12.W;
+                int v = edgeId / Board12x12.W;
+                // Top box
+                if (v > 0 && IsBoxComplete(h, v - 1) && _boxOwners[boxIndex(h, v - 1)] == -1)
+                    claimedBoxes.Add((h, v - 1));
+                // Bottom box
+                if (v < Board12x12.H && IsBoxComplete(h, v) && _boxOwners[boxIndex(h, v)] == -1)
+                    claimedBoxes.Add((h, v));
+            }
+            else
+            {
+                // Vertical edge
+                int id = edgeId - 156;
+                int h = id % (Board12x12.W + 1);
+                int v = id / (Board12x12.W + 1);
+                // Left box
+                if (h > 0 && v < Board12x12.H && IsBoxComplete(h - 1, v) && _boxOwners[boxIndex(h - 1, v)] == -1)
+                    claimedBoxes.Add((h - 1, v));
+                // Right box
+                if (h < Board12x12.W && v < Board12x12.H && IsBoxComplete(h, v) && _boxOwners[boxIndex(h, v)] == -1)
+                    claimedBoxes.Add((h, v));
+            }
+
+            bool boxClaimed = claimedBoxes.Count > 0;
+            foreach (var (boxX, boxY) in claimedBoxes)
+            {
+                int idx = boxIndex(boxX, boxY);
+                _boxOwners[idx] = (sbyte)player;
+                scores[player]++;
+                gameEvents.Add(new GameEvent
+                {
+                    type = GameEventType.BoxClaimed,
+                    edgeId = edgeId,
+                    player = player,
+                    nextPlayer = currentPlayer,
+                    boxX = boxX,
+                    boxY = boxY
+                });
+            }
+
             gameEvents.Add(new GameEvent
             {
                 type = GameEventType.EdgePlaced,
                 edgeId = edgeId,
                 player = player,
-                nextPlayer = nextPlayer,
+                nextPlayer = boxClaimed ? currentPlayer : (currentPlayer + 1) % 2,
                 boxX = 0,
                 boxY = 0
-
             });
 
-            //change player in game engine
-            currentPlayer = nextPlayer;
-            //increment state version
+            // Only switch player if no box was claimed
+            if (!boxClaimed)
+                currentPlayer = (currentPlayer + 1) % 2;
+
             stateVersion++;
 
+            // Check for game over
+            if (!_boxOwners.Contains((sbyte)-1))
+            {
+                gameOver = true;
+                gameEvents.Add(new GameEvent
+                {
+                    type = GameEventType.GameOver,
+                    edgeId = edgeId,
+                    player = player,
+                    nextPlayer = currentPlayer,
+                    boxX = 0,
+                    boxY = 0
+                });
+            }
 
-
-            ApplyMoveResult ValidResult = new ApplyMoveResult
+            return new ApplyMoveResult
             {
                 Ok = true,
-                error = MoveError.None,
+                error = gameOver ? MoveError.GameOver : MoveError.None,
                 StateVersion = stateVersion,
                 Events = gameEvents
             };
-
-            return ValidResult;
-
         }
 
         public void Reset()
