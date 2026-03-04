@@ -4,12 +4,9 @@ namespace DotsAndBoxes.GameHub
 {
     public class RoomManager
     {
-        // One waiting player slot (simple matchmaking)
-        private string? _waitingConnectionId;
-        private object _lock = new();
-
-        // Map RoomId → Room
-        private Dictionary<string, Room> _rooms = new();
+        private string? _waitingConnectionId = null;
+        private readonly object _lock = new();
+        private readonly Dictionary<string, Room> _rooms = new();
 
         public (Room? room, int yourPlayerIndex) EnqueueOrMatch(string connectionId)
         {
@@ -18,48 +15,72 @@ namespace DotsAndBoxes.GameHub
                 if (_waitingConnectionId == null)
                 {
                     _waitingConnectionId = connectionId;
-                    return (null, -1); // Wait
+                    return (null, -1);
                 }
                 else if (_waitingConnectionId == connectionId)
                 {
-                    return (null, -1); // Don't match self
+                    return (null, -1);
                 }
                 else
                 {
-                    // Create room
                     var roomId = Guid.NewGuid().ToString("N");
                     var room = new Room(roomId, _waitingConnectionId, connectionId);
                     _rooms.Add(roomId, room);
                     _waitingConnectionId = null;
-                    return (room, 1); // You are player 1 (waiting was 0)
+                    return (room, 1);
                 }
             }
         }
 
         public Room? GetRoom(string roomId)
         {
-            lock (_lock) { return _rooms.TryGetValue(roomId, out var r) ? r : null; }
+            lock (_lock)
+            {
+                return _rooms.TryGetValue(roomId, out var room) ? room : null;
+            }
         }
 
-        // Other helpers: RemoveRoom, CleanupOnDisconnect, etc.
+        public Room? GetRoomByConnectionId(string connectionId)
+        {
+            lock (_lock)
+            {
+                return _rooms.Values.FirstOrDefault(r => r.PlayerIndices.ContainsKey(connectionId));
+            }
+        }
+
+        public void TryRemoveWaiting(string connectionId)
+        {
+            lock (_lock)
+            {
+                if (_waitingConnectionId == connectionId)
+                    _waitingConnectionId = null;
+            }
+        }
+
+        public void RemoveRoom(string roomId)
+        {
+            lock (_lock)
+            {
+                _rooms.Remove(roomId);
+            }
+        }
     }
 
     public class Room
     {
         public string RoomId { get; }
-        public Dictionary<string, int> PlayerIndices { get; } // connId → 0 or 1
+        public Dictionary<string, int> PlayerIndices { get; }
         public GameEngine Engine { get; }
-        public SemaphoreSlim Lock { get; } = new(1, 1);
+        public SemaphoreSlim Lock { get; } = new SemaphoreSlim(1, 1);
 
-        // constructor wires up the rest
-        public Room(string roomId, string connectionA, string connectionB)
+        public Room(string roomId, string connA, string connB)
         {
             RoomId = roomId;
             Engine = new GameEngine();
             PlayerIndices = new Dictionary<string, int>
             {
-                [connectionA] = 0,
-                [connectionB] = 1
+                [connA] = 0,
+                [connB] = 1
             };
         }
     }

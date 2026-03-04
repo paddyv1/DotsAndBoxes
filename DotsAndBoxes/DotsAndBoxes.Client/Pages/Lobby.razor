@@ -1,0 +1,160 @@
+@page "/"
+@rendermode InteractiveWebAssembly
+@layout GameLayout
+@inject GameHubService Hub
+@inject NavigationManager Nav
+@inject MatchSession Session
+@implements IAsyncDisposable
+
+<PageTitle>Dots &amp; Boxes</PageTitle>
+
+<div class="lobby-wrap">
+    <div class="lobby-card">
+
+        <h1 class="game-title">Dots &amp; Boxes</h1>
+
+        @switch (_phase)
+        {
+            case Phase.Idle:
+                <div class="mb-3">
+                    <input class="form-control name-input"
+                           type="text"
+                           placeholder="Display name (optional)"
+                           maxlength="20"
+                           @bind="_displayName"
+                           @bind:event="oninput" />
+                </div>
+                <button class="btn btn-primary btn-lg w-100" @onclick="FindMatchAsync">
+                    Find Match
+                </button>
+                @if (_errorMessage is not null)
+                {
+                    <p class="error-msg mt-3">@_errorMessage</p>
+                }
+                break;
+
+            case Phase.Connecting:
+                <div class="status-area">
+                    <div class="spinner-border text-light" role="status">
+                        <span class="visually-hidden">Connecting…</span>
+                    </div>
+                    <p class="status-label mt-3">Connecting to server…</p>
+                </div>
+                break;
+
+            case Phase.Waiting:
+                <div class="status-area">
+                    <div class="pulse-rings">
+                        <div class="ring ring-1"></div>
+                        <div class="ring ring-2"></div>
+                        <div class="ring ring-3"></div>
+                        <span class="ring-dot">●</span>
+                    </div>
+                    <p class="status-label mt-4">
+                        Waiting for opponent<span class="ellipsis"></span>
+                    </p>
+                    <button class="btn btn-outline-light btn-sm mt-3" @onclick="CancelAsync">
+                        Cancel
+                    </button>
+                </div>
+                break;
+
+            case Phase.Matched:
+                <div class="status-area">
+                    <div class="match-icon">✓</div>
+                    <p class="status-label mt-3">Match found! Entering game room…</p>
+                </div>
+                break;
+        }
+
+    </div>
+</div>
+
+@code {
+    // ── State machine ─────────────────────────────────────────────────────────
+    private enum Phase { Idle, Connecting, Waiting, Matched }
+
+    private Phase   _phase        = Phase.Idle;
+    private string  _displayName  = string.Empty;
+    private string? _errorMessage;
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    protected override void OnInitialized()
+    {
+        Hub.OnMatchFound += HandleMatchFound;
+        Hub.OnSnapshot   += HandleSnapshot;
+        Hub.OnClosed     += HandleClosed;
+    }
+
+    // ── User actions ──────────────────────────────────────────────────────────
+    private async Task FindMatchAsync()
+    {
+        _errorMessage = null;
+        Session.DisplayName = string.IsNullOrWhiteSpace(_displayName)
+            ? "Player"
+            : _displayName.Trim();
+
+        try
+        {
+            if (Hub.State != HubConnectionState.Connected)
+            {
+                _phase = Phase.Connecting;
+                StateHasChanged();
+                await Hub.ConnectAsync();
+            }
+
+            _phase = Phase.Waiting;
+            await Hub.FindMatchAsync(new FindMatchRequest(Session.DisplayName));
+        }
+        catch (Exception ex)
+        {
+            _phase        = Phase.Idle;
+            _errorMessage = $"Could not connect: {ex.Message}";
+        }
+    }
+
+    private async Task CancelAsync()
+    {
+        // Disconnecting triggers OnDisconnectedAsync on the server,
+        // which removes this connection from the waiting queue.
+        try { await Hub.DisconnectAsync(); } catch { /* already closed */ }
+        _phase = Phase.Idle;
+    }
+
+    // ── Hub event handlers ────────────────────────────────────────────────────
+
+    // MatchFound always arrives before Snapshot (server sends them in order).
+    // Store the match info; navigate once the Snapshot confirms state is ready.
+    private void HandleMatchFound(MatchFoundDto dto)
+    {
+        Session.Match = dto;
+        _phase = Phase.Matched;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleSnapshot(SnapshotDto? snapshot)
+    {
+        Session.InitialSnapshot = snapshot;
+        if (Session.Match is not null)
+            InvokeAsync(() => Nav.NavigateTo($"/game/{Session.Match.RoomId}"));
+    }
+
+    private void HandleClosed(Exception? _)
+    {
+        if (_phase is Phase.Connecting or Phase.Waiting)
+        {
+            _errorMessage = "Connection lost. Please try again.";
+            _phase        = Phase.Idle;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    // ── Cleanup ───────────────────────────────────────────────────────────────
+    public async ValueTask DisposeAsync()
+    {
+        Hub.OnMatchFound -= HandleMatchFound;
+        Hub.OnSnapshot   -= HandleSnapshot;
+        Hub.OnClosed     -= HandleClosed;
+        await Task.CompletedTask;
+    }
+}
