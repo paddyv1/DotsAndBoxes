@@ -124,8 +124,8 @@ namespace DotsAndBoxes.Game.Core.Test.Helper
             EdgeCoord coordExpected = new EdgeCoord
             {
                 orient = Enum.EdgeOrient.Vertical,
-                x = 0,
-                y = 1
+                x = 1,
+                y = 0
             };
 
 
@@ -145,8 +145,8 @@ namespace DotsAndBoxes.Game.Core.Test.Helper
             EdgeCoord coordExpected = new EdgeCoord
             {
                 orient = Enum.EdgeOrient.Vertical,
-                x = 11,
-                y = 12
+                x = 12,
+                y = 11
             };
 
 
@@ -165,11 +165,11 @@ namespace DotsAndBoxes.Game.Core.Test.Helper
             {
                 orient = Enum.EdgeOrient.Vertical,
                 x = 11,
-                y = 12
+                y = 11
             };
             int edgeId;
 
-            int ExpectededgeId = 311;
+            int ExpectededgeId = 299;
 
             // Act
             EdgeHelper.TryEncode(coord, out edgeId);
