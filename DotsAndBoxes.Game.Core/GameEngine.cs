@@ -39,26 +39,70 @@ namespace DotsAndBoxes.Game.Core
 
         public int boxIndex(int x, int y) => y * 12 + x;
 
+        public enum BoxDirection { Above, Below, Left, Right }
+
+        public List<int> GetAdjacentBoxes(int edgeId)
+        {
+            var boxes = new List<int>();
+            //horizontal pathway
+            if (edgeId < 156)
+            {
+                //check above box, boxid = edgeid -12
+                //check below box, boxid = edgeid
+                
+                //shouldnt check above first row, or under last row soi when edgeid < 12, dont check above
+                //shoudlnt check below last row when edgeid >= 144, dont check below
+
+                if(edgeId < 12)
+                {
+                    boxes.Add(edgeId);
+                } else if(edgeId >= 144)
+                {
+                    boxes.Add(edgeId);
+                }
+                else
+                {
+                    boxes.Add(edgeId - 12);
+                    boxes.Add(edgeId);
+                }
+            }
+            else
+            {
+                int id = edgeId - 156;
+                if (id < 12)
+                {
+                    boxes.Add(id);
+                }
+                else if (edgeId >= 144)
+                {
+                    boxes.Add(id);
+                }
+                else
+                {
+                    boxes.Add(id - 12);
+                    boxes.Add(id);
+                }
+            }
+            return boxes;
+        }
+
         //need to implement still
         //look up 4 surrounding edges
         public bool IsBoxComplete(int boxX, int boxY)
         {
             // Bounds check (optional for safety)
             if (boxX < 0 || boxX >= Board12x12.W || boxY < 0 || boxY >= Board12x12.H)
-                throw new ArgumentOutOfRangeException();
+                return false;
 
-            // Calculate indices in each edge array
-            int hTop = boxY * Board12x12.W + boxX;        // Horizontal top
-            int hBottom = (boxY + 1) * Board12x12.W + boxX; // Horizontal bottom
-            int vLeft = boxY * (Board12x12.W + 1) + boxX;   // Vertical left
-            int vRight = boxY * (Board12x12.W + 1) + (boxX + 1); // Vertical right
+            int hTop = boxY * Board12x12.W + boxX;
+            int hBottom = (boxY + 1) * Board12x12.W + boxX;
+            int vLeft = boxY * (Board12x12.W + 1) + boxX;
+            int vRight = boxY * (Board12x12.W + 1) + (boxX + 1);
 
-            // If all four owners are not -1, the box is complete
-            return
-                _hEdgeOwners[hTop] != -1 &&
-                _hEdgeOwners[hBottom] != -1 &&
-                _vEdgeOwners[vLeft] != -1 &&
-                _vEdgeOwners[vRight] != -1;
+            return _hEdgeOwners[hTop] != -1 &&
+                   _hEdgeOwners[hBottom] != -1 &&
+                   _vEdgeOwners[vLeft] != -1 &&
+                   _vEdgeOwners[vRight] != -1;
         }
 
         private static sbyte[] CreateArrayWithValue(int length, sbyte value)
@@ -137,7 +181,7 @@ namespace DotsAndBoxes.Game.Core
             {
                 return new ApplyMoveResult
                 {
-                    Ok = false,
+                    Ok = true,
                     error = MoveError.GameOver,
                     StateVersion = stateVersion,
                     Events = gameEvents
@@ -180,35 +224,17 @@ namespace DotsAndBoxes.Game.Core
             SetEdgeOwner(edgeId, player);
 
             // Find affected boxes (up to 2)
-            var claimedBoxes = new List<(int boxX, int boxY)>();
-            if (edgeId < 156)
+            //this logic is not working!!!
+            //fix ASAP
+            var claimedBoxesThisTurn = new List<(int boxX, int boxY)>();
+            foreach (var boxIndex in GetAdjacentBoxes(edgeId))
             {
-                // Horizontal edge
-                int h = edgeId % Board12x12.W;
-                int v = edgeId / Board12x12.W;
-                // Top box
-                if (v > 0 && IsBoxComplete(h, v - 1) && _boxOwners[boxIndex(h, v - 1)] == -1)
-                    claimedBoxes.Add((h, v - 1));
-                // Bottom box
-                if (v < Board12x12.H && IsBoxComplete(h, v) && _boxOwners[boxIndex(h, v)] == -1)
-                    claimedBoxes.Add((h, v));
-            }
-            else
-            {
-                // Vertical edge
-                int id = edgeId - 156;
-                int h = id % (Board12x12.W + 1);
-                int v = id / (Board12x12.W + 1);
-                // Left box
-                if (h > 0 && v < Board12x12.H && IsBoxComplete(h - 1, v) && _boxOwners[boxIndex(h - 1, v)] == -1)
-                    claimedBoxes.Add((h - 1, v));
-                // Right box
-                if (h < Board12x12.W && v < Board12x12.H && IsBoxComplete(h, v) && _boxOwners[boxIndex(h, v)] == -1)
-                    claimedBoxes.Add((h, v));
+                if (IsBoxComplete(boxX, boxY) && _boxOwners[boxIndex(boxX, boxY)] == -1)
+                    claimedBoxesThisTurn.Add((boxX, boxY));
             }
 
-            bool boxClaimed = claimedBoxes.Count > 0;
-            foreach (var (boxX, boxY) in claimedBoxes)
+            bool boxClaimed = claimedBoxesThisTurn.Count > 0;
+            foreach (var (boxX, boxY) in claimedBoxesThisTurn)
             {
                 int idx = boxIndex(boxX, boxY);
                 _boxOwners[idx] = (sbyte)player;
@@ -236,8 +262,9 @@ namespace DotsAndBoxes.Game.Core
 
             // Only switch player if no box was claimed
             if (!boxClaimed)
+            {
                 currentPlayer = (currentPlayer + 1) % 2;
-
+            }
             stateVersion++;
 
             // Check for game over
