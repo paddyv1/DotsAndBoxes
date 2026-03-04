@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\DotsAndBoxes.Shared\DotsAndBoxes.Shared.csproj" />
     <ProjectReference Include="..\DotsAndBoxes.Client\DotsAndBoxes.Client.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.3" />
   </ItemGroup>
