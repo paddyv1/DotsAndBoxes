@@ -10,13 +10,20 @@ namespace DotsAndBoxes.Game.Core.Helper
     {
         public static bool TryDecode(int edgeId, out EdgeCoord? coord)
         {
-            //first 0->155 horizontal,
-            //156->311 vertical
-            EdgeOrient calculatedOrient = edgeId < 156 ? EdgeOrient.Horizontal : EdgeOrient.Vertical;
-            int baseId = calculatedOrient == EdgeOrient.Horizontal ? edgeId : edgeId - 156;
+            EdgeOrient calculatedOrient = edgeId < Board12x12.HEdgeCount ? EdgeOrient.Horizontal : EdgeOrient.Vertical;
+            int baseId = calculatedOrient == EdgeOrient.Horizontal ? edgeId : edgeId - Board12x12.HEdgeCount;
 
-            int calculatedX = baseId % 12;
-            int calculatedY = baseId / 12;
+            int calculatedX, calculatedY;
+            if (calculatedOrient == EdgeOrient.Horizontal)
+            {   
+                calculatedX = baseId % Board12x12.W;  // column (0..W-1)
+                calculatedY = baseId / Board12x12.W;  // row    (0..H)
+            }
+            else
+            {
+                calculatedX = baseId / Board12x12.H;  // column (0..W)
+                calculatedY = baseId % Board12x12.H;  // row    (0..H-1)
+            }
 
             coord = new EdgeCoord
             {
@@ -26,8 +33,40 @@ namespace DotsAndBoxes.Game.Core.Helper
             };
 
             return true;
-
         }
+
+
+        public static IEnumerable<(int boxX, int boxY)> GetAdjacentBoxCoords(int edgeId)
+        {
+            var boxes = new List<(int, int)>();
+            // Horizontal edges
+            if (edgeId < Board12x12.HEdgeCount)
+            {
+                int h = edgeId % Board12x12.W;
+                int v = edgeId / Board12x12.W;
+                // Top box (if not on top row)
+                if (v > 0)
+                    boxes.Add((h, v - 1));
+                // Bottom box (if not on bottom row)
+                if (v < Board12x12.H)
+                    boxes.Add((h, v));
+            }
+            // Vertical edges
+            else
+            {
+                int id = edgeId - Board12x12.HEdgeCount;
+                int col = id / Board12x12.H;  // column (0..W)
+                int row = id % Board12x12.H;  // row    (0..H-1)
+                // Left box (if not on leftmost column)
+                if (col > 0)
+                    boxes.Add((col - 1, row));
+                // Right box (if not on rightmost column)
+                if (col < Board12x12.W)
+                    boxes.Add((col, row));
+            }
+            return boxes;
+        }
+
 
         public static bool TryEncode(EdgeCoord coord, out int edgeId)
         {
@@ -35,19 +74,18 @@ namespace DotsAndBoxes.Game.Core.Helper
 
             if (coord.orient == EdgeOrient.Horizontal)
             {
-                edgeId = coord.y * 12 + coord.x;
+                edgeId = coord.y * Board12x12.W + coord.x;
             }
             else if (coord.orient == EdgeOrient.Vertical)
             {
-                edgeId = 156 + (coord.y * 12 + coord.x);
+                edgeId = Board12x12.HEdgeCount + (coord.x * Board12x12.H + coord.y);
             }
             else
             {
                 return false;
             }
 
-            // Optionally, validate the edgeId
-            return edgeId >= 0 && edgeId <= 311;
+            return edgeId >= 0 && edgeId <= Board12x12.EdgeCount - 1;
         }
 
         public static bool IsValidEdgeId(int edgeId)
