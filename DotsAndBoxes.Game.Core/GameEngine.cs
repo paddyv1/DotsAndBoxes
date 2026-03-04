@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.ExceptionServices;
-using System.Text;
 using DotsAndBoxes.Game.Core.DTO;
 using DotsAndBoxes.Game.Core.Enum;
 using DotsAndBoxes.Game.Core.Helper;
@@ -12,168 +10,77 @@ namespace DotsAndBoxes.Game.Core
     {
         public sbyte[] _hEdgeOwners = CreateArrayWithValue(Board12x12.HEdgeCount, -1);
         public sbyte[] _vEdgeOwners = CreateArrayWithValue(Board12x12.VEdgeCount, -1);
+        public sbyte[] _boxOwners = CreateArrayWithValue(Board12x12.BoxCount, -1);
 
-        //list to hold boxes in 12x12 gird
-        public sbyte[] _boxOwners = CreateArrayWithValue(144, -1);
-
-        //switch between 0 and 1, 2 players max for now
         public int currentPlayer { get; private set; } = 0;
         public bool gameOver { get; private set; } = false;
-
-        //used in game events to track which move we are on
         public long stateVersion { get; private set; } = 0;
-
-        //keep track of player 0 and player 1 total socres
         public int[] scores { get; } = new int[2];
-
         public List<GameEvent> gameEvents { get; private set; } = new List<GameEvent>();
 
-
-        public GameEngine()
-        {
-            
-        }
+        public GameEngine() { }
 
         public int HIndex(int x, int y) => y * Board12x12.W + x;
         public int VIndex(int x, int y) => y * (Board12x12.W + 1) + x;
-
-        public int boxIndex(int x, int y) => y * 12 + x;
-
-        public enum BoxDirection { Above, Below, Left, Right }
-
-        public List<int> GetAdjacentBoxes(int edgeId)
-        {
-            var boxes = new List<int>();
-            //horizontal pathway
-            if (edgeId < 156)
-            {
-                //check above box, boxid = edgeid -12
-                //check below box, boxid = edgeid
-                
-                //shouldnt check above first row, or under last row soi when edgeid < 12, dont check above
-                //shoudlnt check below last row when edgeid >= 144, dont check below
-
-                if(edgeId < 12)
-                {
-                    boxes.Add(edgeId);
-                } else if(edgeId >= 144)
-                {
-                    boxes.Add(edgeId);
-                }
-                else
-                {
-                    boxes.Add(edgeId - 12);
-                    boxes.Add(edgeId);
-                }
-            }
-            else
-            {
-                int id = edgeId - 156;
-                if (id < 12)
-                {
-                    boxes.Add(id);
-                }
-                else if (edgeId >= 144)
-                {
-                    boxes.Add(id);
-                }
-                else
-                {
-                    boxes.Add(id - 12);
-                    boxes.Add(id);
-                }
-            }
-            return boxes;
-        }
-
-        //need to implement still
-        //look up 4 surrounding edges
-        public bool IsBoxComplete(int boxX, int boxY)
-        {
-            // Bounds check (optional for safety)
-            if (boxX < 0 || boxX >= Board12x12.W || boxY < 0 || boxY >= Board12x12.H)
-                return false;
-
-            int hTop = boxY * Board12x12.W + boxX;
-            int hBottom = (boxY + 1) * Board12x12.W + boxX;
-            int vLeft = boxY * (Board12x12.W + 1) + boxX;
-            int vRight = boxY * (Board12x12.W + 1) + (boxX + 1);
-
-            return _hEdgeOwners[hTop] != -1 &&
-                   _hEdgeOwners[hBottom] != -1 &&
-                   _vEdgeOwners[vLeft] != -1 &&
-                   _vEdgeOwners[vRight] != -1;
-        }
+        public int boxIndex(int x, int y) => y * Board12x12.W + x;
 
         private static sbyte[] CreateArrayWithValue(int length, sbyte value)
         {
             var arr = new sbyte[length];
             for (var i = 0; i < length; i++)
-            {
                 arr[i] = value;
-            }
             return arr;
         }
 
         public int GetEdgeOwner(int edgeId)
         {
-            if(edgeId < 156)
-            {
-                return _hEdgeOwners[edgeId];
-            }
-            else
-            {
-                edgeId = edgeId - 156;
-                return _vEdgeOwners[edgeId];
-            }
+            if (!EdgeHelper.TryDecode(edgeId, out var coord) || coord is null)
+                return -1;
+
+            return coord.orient == EdgeOrient.Horizontal
+                ? _hEdgeOwners[edgeId]
+                : _vEdgeOwners[edgeId - Board12x12.HEdgeCount];
         }
 
         public void SetEdgeOwner(int edgeId, int player)
         {
-
-
-
             if (player != 0 && player != 1)
-            {
                 throw new ArgumentException(nameof(player));
-            }
 
-            sbyte playerFormatted = ((sbyte)player);
+            if (!EdgeHelper.TryDecode(edgeId, out var coord) || coord is null)
+                return;
 
-            if(edgeId > 155)
-            {
-                edgeId = edgeId - 156;
-                _vEdgeOwners[edgeId] = playerFormatted;
-            }
-            else
-            {
+            sbyte playerFormatted = (sbyte)player;
+            if (coord.orient == EdgeOrient.Horizontal)
                 _hEdgeOwners[edgeId] = playerFormatted;
-            }
-
+            else
+                _vEdgeOwners[edgeId - Board12x12.HEdgeCount] = playerFormatted;
         }
 
         public bool IsEdgeFree(int edgeId)
         {
-            if (edgeId < 156)
-            {
-                if (_hEdgeOwners[edgeId] == -1)
-                {
-                    return true;
-                }
-            }
-            else
-            {
-                edgeId = edgeId - 156;
-                if (_vEdgeOwners[edgeId] == -1)
-                {
-                    return true;
-                }
-            }
+            if (!EdgeHelper.TryDecode(edgeId, out var coord) || coord is null)
+                return false;
 
-
-            return false;
+            return coord.orient == EdgeOrient.Horizontal
+                ? _hEdgeOwners[edgeId] == -1
+                : _vEdgeOwners[edgeId - Board12x12.HEdgeCount] == -1;
         }
 
+        public enum Direction { Above, Below, Left, Right }
+
+        public bool IsBoxComplete(int boxX, int boxY)
+        {
+            if (boxX < 0 || boxX >= Board12x12.W || boxY < 0 || boxY >= Board12x12.H)
+                return false;
+
+            EdgeHelper.TryEncode(new EdgeCoord { orient = EdgeOrient.Horizontal, x = boxX, y = boxY }, out int hTop);
+            EdgeHelper.TryEncode(new EdgeCoord { orient = EdgeOrient.Horizontal, x = boxX, y = boxY + 1 }, out int hBottom);
+            EdgeHelper.TryEncode(new EdgeCoord { orient = EdgeOrient.Vertical, x = boxX, y = boxY }, out int vLeft);
+            EdgeHelper.TryEncode(new EdgeCoord { orient = EdgeOrient.Vertical, x = boxX + 1, y = boxY }, out int vRight);
+
+            return !IsEdgeFree(hTop) && !IsEdgeFree(hBottom) && !IsEdgeFree(vLeft) && !IsEdgeFree(vRight);
+        }
 
         public ApplyMoveResult ApplyMove(int player, int edgeId)
         {
@@ -223,13 +130,11 @@ namespace DotsAndBoxes.Game.Core
 
             SetEdgeOwner(edgeId, player);
 
-            // Find affected boxes (up to 2)
-            //this logic is not working!!!
-            //fix ASAP
             var claimedBoxesThisTurn = new List<(int boxX, int boxY)>();
-            foreach (var boxIndex in GetAdjacentBoxes(edgeId))
+            foreach (var (boxX, boxY) in EdgeHelper.GetAdjacentBoxCoords(edgeId))
             {
-                if (IsBoxComplete(boxX, boxY) && _boxOwners[boxIndex(boxX, boxY)] == -1)
+                int idx = boxIndex(boxX, boxY);
+                if (IsBoxComplete(boxX, boxY) && _boxOwners[idx] == -1)
                     claimedBoxesThisTurn.Add((boxX, boxY));
             }
 
@@ -260,14 +165,11 @@ namespace DotsAndBoxes.Game.Core
                 boxY = 0
             });
 
-            // Only switch player if no box was claimed
             if (!boxClaimed)
-            {
                 currentPlayer = (currentPlayer + 1) % 2;
-            }
+
             stateVersion++;
 
-            // Check for game over
             if (!_boxOwners.Contains((sbyte)-1))
             {
                 gameOver = true;
@@ -296,6 +198,4 @@ namespace DotsAndBoxes.Game.Core
             throw new NotImplementedException("Can Add Later");
         }
     }
-
-    
 }
