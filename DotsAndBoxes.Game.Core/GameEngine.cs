@@ -88,7 +88,7 @@ namespace DotsAndBoxes.Game.Core
             {
                 return new ApplyMoveResult
                 {
-                    Ok = true,
+                    Ok = false,
                     error = MoveError.GameOver,
                     StateVersion = stateVersion,
                     Events = gameEvents
@@ -183,7 +183,6 @@ namespace DotsAndBoxes.Game.Core
                     boxY = 0
                 });
             }
-
             return new ApplyMoveResult
             {
                 Ok = true,
